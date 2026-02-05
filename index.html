@@ -20,7 +20,6 @@
         .tab-content { display: none; height: 100vh; overflow-y: auto; padding: 0 15px 150px 15px; box-sizing: border-box; }
         .active-tab { display: block; }
 
-        /* Artist Grid Styling */
         .artist-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; padding: 10px 0; }
         .artist-card { text-align: center; cursor: pointer; }
         .artist-circle { width: 85px; height: 85px; background: #282828; border-radius: 50%; margin: 0 auto 8px; overflow: hidden; border: 2px solid transparent; }
@@ -33,7 +32,10 @@
         .song-info h4 { margin: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .song-info p { margin: 3px 0 0 0; font-size: 12px; color: var(--text-dim); }
 
-        /* Player & Up Next */
+        /* Favorite Button Style */
+        .fav-btn { padding: 10px; color: var(--text-dim); }
+        .fav-btn.active { color: #e91e63; }
+
         #player { text-align: center; padding-top: 40px; }
         .album-art-large { width: 80vw; max-width: 280px; aspect-ratio: 1/1; border-radius: 15px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); object-fit: cover; }
         .progress-container { margin: 25px 0; }
@@ -71,7 +73,7 @@
                 <button class="cat-btn" onclick="loadCategory('Dhanda Nyoliwala Songs', this)">Dhanda Nyoliwala</button>
                  <button class="cat-btn" onclick="loadCategory('Masoom Sharma Songs', this)">Masoom Sharma</button>
                  <button class="cat-btn" onclick="loadCategory('Kd Desi Rock Songs', this)">Kd Desi Rock</button>
-                 <button class="cat-btn" onclick="loadCategory('New Hits', this)">Nusrat Fateh Ali Khan</button>
+                 <button class="cat-btn" onclick="loadCategory('Nusrat Fateh Ali Khan Songs', this)">Nusrat Fateh Ali Khan</button>
                  <button class="cat-btn" onclick="loadCategory('New Hits', this)">New</button>
                 </div>
         </div>
@@ -92,8 +94,13 @@
 
     <div id="player" class="tab-content">
         <img id="p-art" class="album-art-large" src="">
-        <h3 id="p-title">Select a track</h3>
-        <p id="p-artist">Artist Name</p>
+        <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-top:15px;">
+            <div style="text-align:center;">
+                <h3 id="p-title" style="margin:0;">Select a track</h3>
+                <p id="p-artist" style="margin:5px 0 0 0;">Artist Name</p>
+            </div>
+            <i id="p-fav-icon" class="far fa-heart" onclick="toggleFavoriteFromPlayer()" style="font-size:20px; cursor:pointer;"></i>
+        </div>
         <div class="progress-container">
             <input type="range" id="seek-bar" value="0">
             <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-top:5px;">
@@ -122,26 +129,30 @@
         <div class="nav-item" id="n-player" onclick="showTab('player')"><i class="fas fa-play"></i>Player</div>
     </div>
 
+    <audio id="silent-audio" loop>
+        <source src="data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" type="audio/wav">
+    </audio>
+
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
-        const API_KEYS = ["AIzaSyBt7zNiIw5Ho1KzNPDbWse1iPHeP6b21b4", "AIzaSyAiR4UOiSCY17TSYYR_SfDIbxfGL1Li6mk"];
+        const API_KEYS = [
+            "AIzaSyBt7zNiIw5Ho1KzNPDbWse1iPHeP6b21b4", 
+            "AIzaSyAiR4UOiSCY17TSYYR_SfDIbxfGL1Li6mk", 
+            "AIzaSyBuIVQzvUs4mo82LxdD3idqzYTUiUyojak"
+        ];
         let currentKeyIndex = 0;
 
         const ARTISTS = [
-            { name: "Diljit Dosanjh", img: "Diljit Dosanjh.jpg" }, // Replace with real links
-            { name: "Sidhu Moose Wala", img: "Sidhu.jpg" },
-            { name: "Nusrat Fateh Ali Khan", img: "Nusrat Fateh Ali Khan.jpg" },
-            { name: "Karan Aujla", img: "Karan Aujla.jpg" },
-            { name: "AP Dhillon", img: "Ap Dhillon.jpg" },
-            { name: "Arijit Singh", img: "arijit singh.jpg" },
-            { name: "Gippy Grewal", img: "Gippy Grewal.jpg" }, // Replace with real links
-            { name: "Dhanda Nyoliwala", img: "Dhanda Nyoliwala.jpg" },
-            { name: "Kd Desi Rock", img: "Kd.jpg" },
-            { name: "Mashoom Sharma", img: "Masoom Sharma.jpg" },
+            { name: "Diljit Dosanjh", img: "Diljit Dosanjh.jpg" }, { name: "Sidhu Moose Wala", img: "Sidhu.jpg" },
+            { name: "Nusrat Fateh Ali Khan", img: "Nusrat Fateh Ali Khan.jpg" }, { name: "Karan Aujla", img: "Karan Aujla.jpg" },
+            { name: "AP Dhillon", img: "Ap Dhillon.jpg" }, { name: "Arijit Singh", img: "arijit singh.jpg" },
+            { name: "Gippy Grewal", img: "Gippy Grewal.jpg" }, { name: "Dhanda Nyoliwala", img: "Dhanda Nyoliwala.jpg" },
+            { name: "Kd Desi Rock", img: "Kd.jpg" }, { name: "Mashoom Sharma", img: "Masoom Sharma.jpg" },
         ];
 
         let ytPlayer, isPlaying = false, playlist = [], currentIndex = 0;
-        let favs = JSON.parse(localStorage.getItem('desiFavs')) || [];
+        let favorites = JSON.parse(localStorage.getItem('vishu_favorites')) || [];
+        const silentAudio = document.getElementById('silent-audio');
 
         function onYouTubeIframeAPIReady() {
             ytPlayer = new YT.Player('yt-player-api', {
@@ -166,6 +177,52 @@
                 </div>`).join('');
         }
 
+        // Logic for adding/removing favorites
+        function toggleFavorite(song, event) {
+            if(event) event.stopPropagation();
+            const index = favorites.findIndex(f => f.id === song.id);
+            if(index > -1) {
+                favorites.splice(index, 1);
+            } else {
+                favorites.push(song);
+            }
+            localStorage.setItem('vishu_favorites', JSON.stringify(favorites));
+            updateUI();
+        }
+
+        function toggleFavoriteFromPlayer() {
+            if(playlist[currentIndex]) toggleFavorite(playlist[currentIndex]);
+        }
+
+        function updateUI() {
+            if(document.getElementById('home').classList.contains('active-tab')) renderList('home-songs-list');
+            if(document.getElementById('favorites').classList.contains('active-tab')) renderFavList();
+            if(playlist[currentIndex]) {
+                const isFav = favorites.some(f => f.id === playlist[currentIndex].id);
+                document.getElementById('p-fav-icon').className = isFav ? "fas fa-heart active" : "far fa-heart";
+                document.getElementById('p-fav-icon').style.color = isFav ? "#e91e63" : "white";
+            }
+        }
+
+        function renderFavList() {
+            const container = document.getElementById('fav-list');
+            if(favorites.length === 0) {
+                container.innerHTML = "<p style='text-align:center; color:#666; margin-top:50px;'>Library is empty.</p>";
+                return;
+            }
+            container.innerHTML = favorites.map((s, i) => `
+                <div class="song-card" onclick="playFromFavs(${i})">
+                    <img src="${s.img}">
+                    <div class="song-info"><h4>${s.title}</h4><p>${s.artist}</p></div>
+                    <i class="fas fa-heart active" style="color:#e91e63; padding:10px;" onclick="toggleFavorite(${JSON.stringify(s).replace(/"/g, '&quot;')}, event)"></i>
+                </div>`).join('');
+        }
+
+        function playFromFavs(i) {
+            playlist = [...favorites];
+            loadTrack(i);
+        }
+
         async function loadCategory(query, btn) {
             if(btn) { document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
             showTab('home');
@@ -174,20 +231,17 @@
         }
 
         function renderList(cid) {
-            document.getElementById(cid).innerHTML = playlist.map((s, i) => `
+            document.getElementById(cid).innerHTML = playlist.map((s, i) => {
+                const isFav = favorites.some(f => f.id === s.id);
+                return `
                 <div class="song-card" onclick="loadTrack(${i})">
                     <img src="${s.img}">
                     <div class="song-info"><h4>${s.title}</h4><p>${s.artist}</p></div>
-                </div>`).join('');
-        }
-
-        function renderUpNext() {
-            const nextList = playlist.slice(currentIndex + 1, currentIndex + 11);
-            document.getElementById('up-next-list').innerHTML = nextList.length ? nextList.map((s, i) => `
-                <div class="song-card" onclick="loadTrack(${currentIndex + 1 + i})">
-                    <img src="${s.img}">
-                    <div class="song-info"><h4>${s.title}</h4><p>${s.artist}</p></div>
-                </div>`).join('') : "<p style='color:#666; font-size:13px;'>End of playlist</p>";
+                    <i class="${isFav ? 'fas fa-heart active' : 'far fa-heart'} fav-btn" 
+                       style="${isFav ? 'color:#e91e63;' : ''}"
+                       onclick="toggleFavorite(${JSON.stringify(s).replace(/"/g, '&quot;')}, event)"></i>
+                </div>`;
+            }).join('');
         }
 
         function loadTrack(i) {
@@ -198,14 +252,19 @@
             document.getElementById('p-art').src = s.img;
             ytPlayer.loadVideoById(s.id);
             isPlaying = true;
-            updateIcon();
-            renderUpNext(); // Up Next Refresh
+            silentAudio.play().catch(() => {});
+            updateUI();
+            renderUpNext();
             showTab('player');
         }
 
         function togglePlay() { isPlaying ? ytPlayer.pauseVideo() : ytPlayer.playVideo(); }
-        function onStateChange(e) { isPlaying = (e.data === 1); updateIcon(); if(e.data === 0) nextTrack(); }
-        function updateIcon() { document.getElementById('play-icon').className = isPlaying ? "fas fa-pause-circle play-main" : "fas fa-play-circle play-main"; }
+        function onStateChange(e) { 
+            isPlaying = (e.data === 1); 
+            document.getElementById('play-icon').className = isPlaying ? "fas fa-pause-circle play-main" : "fas fa-play-circle play-main";
+            if(e.data === 0) nextTrack(); 
+        }
+
         function nextTrack() { if(currentIndex < playlist.length-1) loadTrack(currentIndex+1); }
         function prevTrack() { if(currentIndex > 0) loadTrack(currentIndex-1); }
 
@@ -214,7 +273,7 @@
             document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
             document.getElementById(id).classList.add('active-tab');
             document.getElementById('n-' + id).classList.add('active');
-            if(id === 'player') renderUpNext();
+            if(id === 'favorites') renderFavList();
         }
 
         setInterval(() => {
@@ -229,6 +288,14 @@
         }, 1000);
         function formatTime(s) { const m=Math.floor(s/60), sec=Math.floor(s%60); return `${m}:${sec<10?'0':''}${sec}`; }
         async function searchYT(q) { playlist = await fetchYT(q); renderList('yt-results'); }
+        function renderUpNext() {
+            const nextList = playlist.slice(currentIndex + 1, currentIndex + 11);
+            document.getElementById('up-next-list').innerHTML = nextList.length ? nextList.map((s, i) => `
+                <div class="song-card" onclick="loadTrack(${currentIndex + 1 + i})">
+                    <img src="${s.img}">
+                    <div class="song-info"><h4>${s.title}</h4><p>${s.artist}</p></div>
+                </div>`).join('') : "<p style='color:#666; font-size:13px;'>End of playlist</p>";
+        }
     </script>
 </body>
 </html>
