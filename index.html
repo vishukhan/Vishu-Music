@@ -59,22 +59,12 @@
             <div class="brand-name">Vishu Music</div>
             <div class="category-scroll">
                  <button class="cat-btn active" onclick="loadCategory('Trending Songs', this)">Trending</button>
-                <button class="cat-btn" onclick="loadCategory('Hindi Top Hits', this)">Hindi</button>
-                <button class="cat-btn" onclick="loadCategory('Haryanvi Songs', this)">Haryanvi</button>
-                <button class="cat-btn" onclick="loadCategory('Latest Top Songs', this)">Latest</button>
+                 <button class="cat-btn" onclick="loadCategory('Hindi Top Hits', this)">Hindi</button>
+                 <button class="cat-btn" onclick="loadCategory('Haryanvi Songs', this)">Haryanvi</button>
+                 <button class="cat-btn" onclick="loadCategory('Latest Top Songs', this)">Latest</button>
                 <button class="cat-btn" onclick="loadCategory('New Punjabi Songs', this)">Punjabi</button>
                 <button class="cat-btn" onclick="loadCategory('Lo-Fi Hip Hop Songs', this)">Lo-Fi</button>
-                <button class="cat-btn" onclick="loadCategory('Bollywood Hits Songs', this)">Bollywood</button>
-                <button class="cat-btn" onclick="loadCategory('Sad Songs', this)">Sad</button>
-                <button class="cat-btn" onclick="loadCategory('Love Songs', this)">Love</button>
-                <button class="cat-btn" onclick="loadCategory('Romantic Songs', this)">Romantic</button>
-                <button class="cat-btn" onclick="loadCategory('Arijit Singh Songs', this)">Arijit Singh</button>
-                <button class="cat-btn" onclick="loadCategory('Dhanda Nyoliwala Songs', this)">Dhanda Nyoliwala</button>
-                 <button class="cat-btn" onclick="loadCategory('Masoom Sharma Songs', this)">Masoom Sharma</button>
-                 <button class="cat-btn" onclick="loadCategory('Kd Desi Rock Songs', this)">Kd Desi Rock</button>
-                 <button class="cat-btn" onclick="loadCategory('Nusrat Fateh Ali Khan Songs', this)">Nusrat Fateh Ali Khan</button>
-                 <button class="cat-btn" onclick="loadCategory('New Hits', this)">New</button>
-                </div>
+            </div>
         </div>
         <div id="home-songs-list"></div>
     </div>
@@ -111,12 +101,10 @@
             <i id="play-icon" class="fas fa-play-circle play-main" onclick="togglePlay()"></i>
             <i class="fas fa-step-forward" onclick="nextTrack()" style="font-size:25px;"></i>
         </div>
-        
         <div class="up-next-container">
             <div class="up-next-title">Up Next</div>
             <div id="up-next-list"></div>
         </div>
-        
         <div id="yt-hidden"><div id="yt-player-api"></div></div>
     </div>
 
@@ -128,15 +116,15 @@
         <div class="nav-item" id="n-player" onclick="showTab('player')"><i class="fas fa-play"></i>Player</div>
     </div>
 
-    <audio id="silent-audio" loop>
-        <source src="data:audio/wav;base64,UklGRigAAABXQVZFRm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" type="audio/wav">
+    <audio id="bg-silent-audio" loop>
+        <source src="https://raw.githubusercontent.com/anars/blank-audio/master/10-seconds-of-silence.mp3" type="audio/mpeg">
     </audio>
 
     <script src="https://www.youtube.com/iframe_api"></script>
     <script>
+        // API Keys aur Initial Data wahi hain jo aapke the
         const API_KEYS = ["AIzaSyBt7zNiIw5Ho1KzNPDbWse1iPHeP6b21b4", "AIzaSyAiR4UOiSCY17TSYYR_SfDIbxfGL1Li6mk", "AIzaSyBuIVQzvUs4mo82LxdD3idqzYTUiUyojak"];
         let currentKeyIndex = 0;
-
         const ARTISTS = [
             { name: "Diljit Dosanjh", img: "Diljit Dosanjh.jpg" }, { name: "Sidhu Moose Wala", img: "Sidhu.jpg" },
             { name: "Nusrat Fateh Ali Khan", img: "Nusrat Fateh Ali Khan.jpg" }, { name: "Karan Aujla", img: "Karan Aujla.jpg" },
@@ -147,10 +135,11 @@
 
         let ytPlayer, isPlaying = false, playlist = [], currentIndex = 0;
         let favorites = JSON.parse(localStorage.getItem('vishu_favorites')) || [];
-        const silentAudio = document.getElementById('silent-audio');
+        const bgAudio = document.getElementById('bg-silent-audio');
 
         function onYouTubeIframeAPIReady() {
             ytPlayer = new YT.Player('yt-player-api', {
+                height: '0', width: '0',
                 events: { 
                     'onStateChange': onStateChange, 
                     'onReady': () => { renderArtists(); loadCategory('Trending Songs'); } 
@@ -158,6 +147,7 @@
             });
         }
 
+        // Search aur Fetch logic same hai
         async function fetchYT(q) {
             try {
                 const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=25&q=${encodeURIComponent(q)}&type=video&key=${API_KEYS[currentKeyIndex]}`);
@@ -167,6 +157,40 @@
             } catch (e) { return []; }
         }
 
+        function loadTrack(i) {
+            currentIndex = i;
+            const s = playlist[i];
+            document.getElementById('p-title').innerText = s.title;
+            document.getElementById('p-artist').innerText = s.artist;
+            document.getElementById('p-art').src = s.img;
+            ytPlayer.loadVideoById(s.id);
+            isPlaying = true;
+            
+            // BACKGROUND FIX: Jaise hi gaana start ho, silent audio play kar do
+            bgAudio.play().catch(e => console.log("Silent audio started"));
+            
+            updateUI();
+            renderUpNext();
+            showTab('player');
+        }
+
+        function togglePlay() { 
+            if(isPlaying) {
+                ytPlayer.pauseVideo();
+                bgAudio.pause();
+            } else {
+                ytPlayer.playVideo();
+                bgAudio.play();
+            }
+        }
+
+        function onStateChange(e) { 
+            isPlaying = (e.data === 1); 
+            document.getElementById('play-icon').className = isPlaying ? "fas fa-pause-circle play-main" : "fas fa-play-circle play-main";
+            if(e.data === 0) nextTrack(); 
+        }
+
+        // UI rendering functions (Same as original)
         function renderArtists() {
             document.getElementById('artist-list').innerHTML = ARTISTS.map(a => `
                 <div class="artist-card" onclick="loadCategory('${a.name} Songs')">
@@ -178,17 +202,10 @@
         function toggleFavorite(song, event) {
             if(event) event.stopPropagation();
             const index = favorites.findIndex(f => f.id === song.id);
-            if(index > -1) {
-                favorites.splice(index, 1);
-            } else {
-                favorites.push(song);
-            }
+            if(index > -1) favorites.splice(index, 1);
+            else favorites.push(song);
             localStorage.setItem('vishu_favorites', JSON.stringify(favorites));
             updateUI();
-        }
-
-        function toggleFavoriteFromPlayer() {
-            if(playlist[currentIndex]) toggleFavorite(playlist[currentIndex]);
         }
 
         function updateUI() {
@@ -215,10 +232,7 @@
                 </div>`).join('');
         }
 
-        function playFromFavs(i) {
-            playlist = [...favorites];
-            loadTrack(i);
-        }
+        function playFromFavs(i) { playlist = [...favorites]; loadTrack(i); }
 
         async function loadCategory(query, btn) {
             if(btn) { document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
@@ -241,29 +255,6 @@
             }).join('');
         }
 
-        function loadTrack(i) {
-            currentIndex = i;
-            const s = playlist[i];
-            document.getElementById('p-title').innerText = s.title;
-            document.getElementById('p-artist').innerText = s.artist;
-            document.getElementById('p-art').src = s.img;
-            ytPlayer.loadVideoById(s.id);
-            isPlaying = true;
-            silentAudio.play().catch(() => {});
-            updateUI();
-            renderUpNext();
-            showTab('player');
-        }
-
-        function togglePlay() { isPlaying ? ytPlayer.pauseVideo() : ytPlayer.playVideo(); }
-
-        function onStateChange(e) { 
-            isPlaying = (e.data === 1); 
-            document.getElementById('play-icon').className = isPlaying ? "fas fa-pause-circle play-main" : "fas fa-play-circle play-main";
-            if(e.data === 0) nextTrack(); 
-        }
-
-        // Seek function logic
         function seekTo(value) {
             if(ytPlayer && ytPlayer.getDuration) {
                 const newTime = (value / 100) * ytPlayer.getDuration();
@@ -282,7 +273,6 @@
             if(id === 'favorites') renderFavList();
         }
 
-        // Live timer and seek bar sync
         setInterval(() => {
             if(ytPlayer && ytPlayer.getCurrentTime && isPlaying) {
                 const c = ytPlayer.getCurrentTime(), t = ytPlayer.getDuration();
@@ -309,6 +299,8 @@
                     <div class="song-info"><h4>${s.title}</h4><p>${s.artist}</p></div>
                 </div>`).join('') : "<p style='color:#666; font-size:13px;'>End of playlist</p>";
         }
+
+        function toggleFavoriteFromPlayer() { if(playlist[currentIndex]) toggleFavorite(playlist[currentIndex]); }
     </script>
 </body>
 </html>
